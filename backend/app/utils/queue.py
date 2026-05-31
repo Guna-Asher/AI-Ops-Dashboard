@@ -1,0 +1,26 @@
+import json
+import aio_pika
+from app.core.config import settings
+
+class RabbitMQClient:
+    def __init__(self):
+        self.connection = None
+        self.channel = None
+
+    async def connect(self):
+        self.connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
+        self.channel = await self.connection.channel()
+
+    async def publish(self, routing_key: str, message: str):
+        if not self.channel:
+            raise ConnectionError("Channel not initialized")
+        await self.channel.default_exchange.publish(
+            aio_pika.Message(body=message.encode()),
+            routing_key=routing_key,
+        )
+
+    async def close(self):
+        if self.connection:
+            await self.connection.close()
+
+rabbitmq_client = RabbitMQClient()
