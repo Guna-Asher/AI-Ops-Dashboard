@@ -1,0 +1,47 @@
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+.widget {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.widget h3 {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+.widget canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+.incident-detail {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.analysis-box {
+    background: #f0fdf4;
+    border-left: 4px solid #22c55e;
+    padding: 1rem;
+    margin: 1rem 0;
+    white-space: pre-wrap;
+}
+.log-list {
+    list-style: none;
+    margin-top: 1rem;
+}
+.log-entry {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+    font-family: monospace;
+}
+.log-level {
+    font-weight: bold;
+    margin-right: 0.5rem;
+}

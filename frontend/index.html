@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Ops Dashboard</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+    <div id="app">
+        <nav class="navbar">
+            <span class="logo">AI Ops Dashboard</span>
+            <div id="nav-links">
+                <a href="#" id="nav-incidents">Incidents</a>
+                <a href="#" id="nav-logs">Logs</a>
+                <a href="#" id="nav-dashboard">Dashboard</a>
+                <a href="#" id="nav-alerts">Alerts</a>
+            </div>
+            <div id="auth-section">
+                <span id="user-email"></span>
+                <button id="logout-btn" style="display:none">Logout</button>
+            </div>
+        </nav>
+        <main id="main-content">
+            <!-- Dynamic content -->
+        </main>
+    </div>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/incidents.js"></script>
+    <script src="js/logs.js"></script>
+    <script src="js/alerts.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+        });
+    </script>
+</body>
+</html>
