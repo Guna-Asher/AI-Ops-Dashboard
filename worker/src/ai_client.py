@@ -1,9 +1,14 @@
-import openai
+import json
+
+import httpx
+
 from app.core.config import settings
 
 class AIClient:
     def __init__(self):
-        self.client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        self._api_key = settings.GOOGLE_AI_STUDIO_API_KEY
+        self._model = settings.GOOGLE_AI_STUDIO_MODEL
+        self._endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     async def analyze_incident(self, incident: dict, logs: str) -> str:
         prompt = f"""
@@ -11,10 +16,27 @@ class AIClient:
         Incident: {json.dumps(incident)}
         Logs: {logs}
         """
-        response = await self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=500,
-        )
-        return response.choices[0].message.content.strip()
+        if not self._api_key:
+            raise RuntimeError("GOOGLE_AI_STUDIO_API_KEY is not set")
+
+        url = self._endpoint.format(model=self._model)
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.3,
+                "maxOutputTokens": 500,
+            },
+        }
+
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                url,
+                params={"key": self._api_key},
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            resp.raise_for_status()
+
+        data = resp.json()
+        text = data["candidates"][0]["content"]["parts"][0].get("text", "")
+        return (text or "").strip()

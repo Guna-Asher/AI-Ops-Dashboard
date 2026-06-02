@@ -1,11 +1,20 @@
 import json
 from typing import Dict, Any
-import openai
+
+import httpx
+
 from app.core.config import settings
 
 class AIService:
     def __init__(self):
-        self.client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        if not settings.GOOGLE_AI_STUDIO_API_KEY:
+            # allow startup even if key missing; actual call will fail with clear error
+            self._api_key = ""
+        else:
+            self._api_key = settings.GOOGLE_AI_STUDIO_API_KEY
+
+        self._model = settings.GOOGLE_AI_STUDIO_MODEL
+        self._endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     async def analyze_incident(self, incident: Dict[str, Any], logs: str) -> str:
         prompt = f"""
@@ -24,12 +33,35 @@ class AIService:
         4. Preventive measures
         """
         try:
-            response = await self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_tokens=1000,
+            if not self._api_key:
+                raise RuntimeError("GOOGLE_AI_STUDIO_API_KEY is not set")
+
+            url = self._endpoint.format(model=self._model)
+            payload = {
+                "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.3,
+                    "maxOutputTokens": 1000,
+                },
+            }
+
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(
+                    url,
+                    params={"key": self._api_key},
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                resp.raise_for_status()
+
+            data = resp.json()
+            # Gemini returns: candidates[0].content.parts[0].text
+            text = (
+                data.get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
             )
-            return response.choices[0].message.content.strip()
+            return (text or "").strip()
         except Exception as e:
             return f"AI analysis failed: {str(e)}"
