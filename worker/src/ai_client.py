@@ -1,14 +1,20 @@
 import json
-
 import httpx
 
+
+import google.generativeai as genai
 from app.core.config import settings
 
 class AIClient:
     def __init__(self):
+
         self._api_key = settings.GOOGLE_AI_STUDIO_API_KEY
         self._model = settings.GOOGLE_AI_STUDIO_MODEL
         self._endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+        genai.configure(api_key=settings.GOOGLE_API_KEY)
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
+
 
     async def analyze_incident(self, incident: dict, logs: str) -> str:
         prompt = f"""
@@ -16,6 +22,7 @@ class AIClient:
         Incident: {json.dumps(incident)}
         Logs: {logs}
         """
+
         if not self._api_key:
             raise RuntimeError("GOOGLE_AI_STUDIO_API_KEY is not set")
 
@@ -40,3 +47,6 @@ class AIClient:
         data = resp.json()
         text = data["candidates"][0]["content"]["parts"][0].get("text", "")
         return (text or "").strip()
+
+        response = self.model.generate_content(prompt)
+        return response.text.strip()
