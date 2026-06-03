@@ -1,16 +1,16 @@
 import json
 from typing import Dict, Any
-
-
-import httpx
-
-
 import google.generativeai as genai
-
+import httpx
+import google.generativeai as genai
 from app.core.config import settings
 
 class AIService:
     def __init__(self):
+
+        genai.configure(api_key=settings.GOOGLE_API_KEY)
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
+
 
         if not settings.GOOGLE_AI_STUDIO_API_KEY:
             # allow startup even if key missing; actual call will fail with clear error
@@ -23,6 +23,7 @@ class AIService:
 
         genai.configure(api_key=settings.GOOGLE_API_KEY)
         self.model = genai.GenerativeModel('gemini-1.5-flash')
+
 
 
     async def analyze_incident(self, incident: Dict[str, Any], logs: str) -> str:
@@ -42,6 +43,9 @@ class AIService:
         4. Preventive measures
         """
         try:
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
+
 
             if not self._api_key:
                 raise RuntimeError("GOOGLE_AI_STUDIO_API_KEY is not set")
@@ -76,6 +80,7 @@ class AIService:
 
             response = self.model.generate_content(prompt)
             return response.text.strip()
+
 
         except Exception as e:
             return f"AI analysis failed: {str(e)}"
