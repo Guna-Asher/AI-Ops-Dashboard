@@ -4,14 +4,19 @@ from app.services.ai import AIService
 
 @pytest.mark.asyncio
 async def test_ai_analysis():
-    with patch("app.services.ai.openai.AsyncOpenAI") as mock_openai:
-        mock_completion = AsyncMock()
-        mock_completion.choices = [AsyncMock(message=AsyncMock(content="Root cause: ..."))]
-        mock_openai.return_value.chat.completions.create.return_value = mock_completion
-        
+    with patch("app.services.ai.httpx.AsyncClient") as mock_client:
+        mock_resp = AsyncMock()
+        mock_resp.json.return_value = {
+            "candidates": [
+                {"content": {"parts": [{"text": "Root cause: ..."}]}}
+            ]
+        }
+        mock_resp.raise_for_status = AsyncMock()
+        mock_client.return_value.__aenter__.return_value.post.return_value = mock_resp
+
         service = AIService()
         result = await service.analyze_incident(
             {"title": "Test", "description": "Desc", "status": "open", "severity": "high"},
-            "Sample log"
+            "Sample log",
         )
         assert "Root cause" in result

@@ -1,19 +1,29 @@
-# AI Ops Dashboard
+# AI Ops Dashboard (AI Incident Analyzer)
 
-Project rebuild in progress.
+Real-time incident management dashboard with AI-powered root cause analysis.
 
-Previous prototype archived in branch: legacy-v0
+## Features
+- Incident lifecycle management (create, update, resolve)
+- Log aggregation and correlation
+- AI-driven analysis using Google AI Studio (Gemini)
 
-Current version focuses on:
+- Customizable dashboards with widgets
+- Alert rules and notifications
+- JWT authentication
+- RabbitMQ event-driven architecture
+- Prometheus & Grafana monitoring
+- Docker Compose and Kubernetes deployments
 
-- FastAPI
-- PostgreSQL
-- RabbitMQ
-- Redis
-- AI Incident Analysis
-- Docker
-- Prometheus
-- Grafana
-- AWS Deployment
+## Quick Start
+1. Clone repo: `git clone https://github.com/yourorg/ai-ops-dashboard.git`
+2. Copy `.env.example` to `.env` and fill in `GOOGLE_AI_STUDIO_API_KEY`
 
-Following production-grade architecture and development practices.
+3. Run `docker-compose up -d`
+4. Access frontend at http://localhost:8080
+5. Grafana at http://localhost:3000 (admin/admin)
+
+## Architecture
+See `docs/architecture.md`
+
+## API Documentation
+See `docs/API.md`

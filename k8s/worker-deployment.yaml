@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: aiops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: myrepo/aiops-worker:latest
+        env:
+        - name: DATABASE_URL
+          value: postgresql+asyncpg://aiops:aiops@postgres:5432/aiops
+        - name: RABBITMQ_URL
+          value: amqp://guest:guest@rabbitmq:5672//
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aiops-secrets
+              key: openai-api-key
