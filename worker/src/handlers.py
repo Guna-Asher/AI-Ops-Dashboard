@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.models.incident import Incident
 from app.models.log import LogEntry
-from ai_client import AIClient
+from .ai_client import AIClient
 
 logger = logging.getLogger(__name__)
 

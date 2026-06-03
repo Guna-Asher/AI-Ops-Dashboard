@@ -7,7 +7,8 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.v1 import router as v1_router
 from app.core.config import settings
-from app.models.base import engine, Base
+from app.core.database import engine
+from app.models.base import Base
 from app.utils.redis import redis_client
 from app.utils.queue import rabbitmq_client
 

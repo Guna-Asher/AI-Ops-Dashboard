@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from consumer import start_consumer
+from .consumer import start_consumer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
