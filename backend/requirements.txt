@@ -6,11 +6,12 @@ alembic==1.13.0
 pydantic==2.5.2
 pydantic-settings==2.1.0
 python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
+bcrypt>=4.0.0
 python-multipart==0.0.6
 redis==5.0.1
 aio-pika==9.3.1
-google-generativeai==0.8.4
+google-generativeai==0.8.4          # <-- replace openai
 httpx==0.25.2
+email-validator>=2.0.0
 prometheus-fastapi-instrumentator==6.1.0
 python-dotenv==1.0.0
