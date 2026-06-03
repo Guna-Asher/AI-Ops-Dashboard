@@ -1,52 +1,35 @@
 import json
-import httpx
-import google.generativeai as genai
 from app.core.config import settings
 
 class AIClient:
     def __init__(self):
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
-        self._api_key = settings.GOOGLE_AI_STUDIO_API_KEY
-        self._model = settings.GOOGLE_AI_STUDIO_MODEL
-        self._endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.api_key = settings.GOOGLE_API_KEY
 
     async def analyze_incident(self, incident: dict, logs: str) -> str:
-        prompt = f"""
-        Analyze the following incident and provide root cause and recommendations.
-        Incident: {json.dumps(incident)}
-        Logs: {logs}
         """
-        response = self.model.generate_content(prompt)
-        return response.text.strip()
-
-        if not self._api_key:
-            raise RuntimeError("GOOGLE_AI_STUDIO_API_KEY is not set")
-
-        url = self._endpoint.format(model=self._model)
-        payload = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.3,
-                "maxOutputTokens": 500,
-            },
-        }
-
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(
-                url,
-                params={"key": self._api_key},
-                json=payload,
-                headers={"Content-Type": "application/json"},
+        Returns a dummy analysis when GOOGLE_API_KEY is 'dummy' or empty,
+        otherwise calls Google Generative AI.
+        """
+        # ---------- DUMMY MODE ----------
+        if not self.api_key or self.api_key == "dummy":
+            return (
+                "DUMMY AI ANALYSIS (replace GOOGLE_API_KEY with a real key)\n\n"
+                f"Root Cause: Simulated root cause for incident '{incident.get('title', 'Unknown')}'.\n"
+                f"Impact Assessment: Severity {incident.get('severity', 'unknown')} could affect system performance.\n"
+                "Immediate Actions: Check logs, restart affected service, notify on-call.\n"
+                "Preventive Measures: Set up monitoring alerts and auto-scaling."
             )
-            resp.raise_for_status()
-
-        data = resp.json()
-        text = data["candidates"][0]["content"]["parts"][0].get("text", "")
-        return (text or "").strip()
-
-        response = self.model.generate_content(prompt)
-        return response.text.strip()
+        # ---------- REAL API CALL ----------
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            prompt = f"""
+Analyze the following incident and provide root cause and recommendations.
+Incident: {json.dumps(incident)}
+Logs: {logs}
+"""
+            response = model.generate_content(prompt)
+            return response.text.strip()
+        except Exception as e:
+            return f"AI analysis failed: {str(e)}"
