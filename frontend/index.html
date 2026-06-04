@@ -16,6 +16,19 @@
                 <a href="#" id="nav-logs">Logs</a>
                 <a href="#" id="nav-dashboard">Dashboard</a>
                 <a href="#" id="nav-alerts">Alerts</a>
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const navIncidents = document.getElementById('nav-incidents');
+                        const navLogs = document.getElementById('nav-logs');
+                        const navDashboard = document.getElementById('nav-dashboard');
+                        const navAlerts = document.getElementById('nav-alerts');
+
+                        if (navIncidents) navIncidents.addEventListener('click', (e) => { e.preventDefault(); showIncidents(); });
+                        if (navLogs) navLogs.addEventListener('click', (e) => { e.preventDefault(); showLogs(); });
+                        if (navDashboard) navDashboard.addEventListener('click', (e) => { e.preventDefault(); showDashboard(); });
+                        if (navAlerts) navAlerts.addEventListener('click', (e) => { e.preventDefault(); showAlerts(); });
+                    });
+                </script>
             </div>
             <div id="auth-section">
                 <span id="user-email"></span>
@@ -33,9 +46,29 @@
     <script src="js/alerts.js"></script>
     <script src="js/dashboard.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
-        });
+            document.addEventListener('DOMContentLoaded', () => {
+                checkAuth();
+
+                // Wire up navbar (these functions are defined in per-page JS files)
+                const navIncidents = document.getElementById('nav-incidents');
+                const navLogs = document.getElementById('nav-logs');
+                const navDashboard = document.getElementById('nav-dashboard');
+                const navAlerts = document.getElementById('nav-alerts');
+
+                if (navIncidents) navIncidents.addEventListener('click', (e) => { e.preventDefault(); showIncidents(); });
+                if (navLogs) navLogs.addEventListener('click', (e) => { e.preventDefault(); showLogs(); });
+                if (navDashboard) navDashboard.addEventListener('click', (e) => { e.preventDefault(); showDashboard(); });
+                if (navAlerts) navAlerts.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // Alerts UI JS is not present in this build yet
+                    document.getElementById('main-content').innerHTML = `
+                        <div class="page active">
+                            <h2>Alerts</h2>
+                            <p>Alerts page is not implemented in the current frontend build.</p>
+                        </div>
+                    `;
+                });
+            });
     </script>
 </body>
 </html>

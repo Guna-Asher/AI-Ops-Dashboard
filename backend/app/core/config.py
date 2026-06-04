@@ -2,9 +2,10 @@ from typing import List
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+asyncpg://aiops:aiops@localhost:5432/aiops"
-    REDIS_URL: str = "redis://localhost:6379/0"
-    RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672//"
+    # Defaults are container-friendly so docker-compose/k8s work out of the box
+    DATABASE_URL: str = "postgresql+asyncpg://aiops:aiops@postgres:5432/aiops"
+    REDIS_URL: str = "redis://redis:6379/0"
+    RABBITMQ_URL: str = "amqp://guest:guest@rabbitmq:5672//"
     SECRET_KEY: str = "super-secret-key"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
