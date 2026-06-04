@@ -283,12 +283,13 @@ sequenceDiagram
 graph TD
   A[Worker receives incident.created] --> B[Load incident + recent logs]
   B --> C{GOOGLE_API_KEY configured?}
-  C -- "" or "dummy" --> D[Return dummy analysis text]
-  C -- real key --> E[google.generativeai configure(api_key)]
+  C -- "empty/dummy" --> D[Return dummy analysis text]
+  C -- "real key" --> E[google.generativeai configure(api_key)]
   E --> F[GenerativeModel gemini-1.5-flash]
   F --> G[generate_content(prompt)]
   G --> H[Persist analysis appended to Incident.description]
 ```
+
 
 ### Monitoring flow (Mermaid)
 
