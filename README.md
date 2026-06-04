@@ -166,19 +166,21 @@ A robust architecture should:
 
 ```mermaid
 graph TD
-  User[Operator/User] -->|Browser| Frontend[Nginx Static Frontend]
-  Frontend -->|HTTP /api/v1/*| Backend[FastAPI Backend]
-  Backend -->|Async SQLAlchemy| Postgres[(PostgreSQL)]
-  Backend -->|JWT verification & issuance| Backend
-  Backend -->|Publish event| RabbitMQ[RabbitMQ]
 
-  RabbitMQ -->|incidents.events| Worker[Worker Consumer]
-  Worker -->|Async SQLAlchemy| Postgres
-  Worker -->|Recent logs| Worker
-  Worker -->|AI call (dummy or Gemini)| Gemini[Google Generative AI]
+    User["User"] --> Frontend["Frontend"]
+    Frontend --> Backend["FastAPI Backend"]
 
-  Backend -->|Metrics| Prometheus[Prometheus]
-  Prometheus -->|Dashboards| Grafana[Grafana]
+    Backend --> Postgres["PostgreSQL"]
+    Backend --> RabbitMQ["RabbitMQ"]
+
+    RabbitMQ --> Worker["Worker Service"]
+
+    Worker --> Postgres
+    Worker --> Gemini["Google Gemini AI"]
+
+    Backend --> Prometheus["Prometheus"]
+
+    Prometheus --> Grafana["Grafana"]
 ```
 
 ### Core request/processing responsibilities
@@ -192,25 +194,33 @@ graph TD
 
 ```mermaid
 sequenceDiagram
-  participant U as User
-  participant F as Frontend
-  participant B as Backend (FastAPI)
-  participant DB as PostgreSQL
-  participant MQ as RabbitMQ
-  participant W as Worker
-  participant AI as Gemini
 
-  U->>F: Create incident (title/description/status/severity)
-  F->>B: POST /api/v1/incidents/
-  B->>DB: Insert Incident row
-  B->>MQ: Publish {event:"incident.created", payload:{incident_id}}
-  MQ->>W: Deliver message from queue incidents.events
-  W->>DB: Load Incident by id
-  W->>DB: Load last 50 LogEntry rows for incident_id
-  W->>AI: generate_content(prompt) (only if GOOGLE_API_KEY configured)
-  AI-->>W: analysis text
-  W->>DB: Append analysis to Incident.description and commit
-  B-->>F: GET /api/v1/incidents/{id} reflects updated description
+    participant User
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+    participant RabbitMQ
+    participant Worker
+    participant Gemini
+
+    User->>Frontend: Create Incident
+    Frontend->>Backend: POST Incident
+
+    Backend->>PostgreSQL: Save Incident
+    Backend->>RabbitMQ: Publish Event
+
+    RabbitMQ->>Worker: Consume Event
+
+    Worker->>PostgreSQL: Fetch Incident
+    Worker->>PostgreSQL: Fetch Logs
+
+    Worker->>Gemini: Request Analysis
+    Gemini-->>Worker: Return Analysis
+
+    Worker->>PostgreSQL: Save AI Analysis
+
+    User->>Backend: Get Incident
+    Backend-->>User: Incident with Analysis
 ```
 
 ---
@@ -219,115 +229,99 @@ sequenceDiagram
 
 This section maps directly to code-level behavior.
 
-### Request flow (Mermaid)
-
-```mermaid
-flowchart LR
-  A[Browser] --> B[FastAPI Router /api/v1]
-  B --> C[Dependency: get_db()]
-  B --> D[Dependency: get_current_user()]
-  B --> E[Service layer (IncidentService/LogService/etc.)]
-  E --> F[Repository layer (BaseRepository + table-specific repos)]
-  F --> G[AsyncSession -> PostgreSQL]
-  E --> H[Optional: EventBus.publish_incident_created()]
-  H --> I[RabbitMQ queue incidents.events]
-  B --> J[Response JSON (Pydantic schemas)]
-```
-
 ### Authentication flow (Mermaid)
 
 ```mermaid
 sequenceDiagram
-  participant U as User
-  participant F as Frontend JS
-  participant B as Backend
 
-  U->>F: Enter email + password
-  F->>B: POST /api/v1/auth/login (OAuth2PasswordRequestForm)
-  B->>B: AuthService.authenticate(email,password)
-  B->>B: verify_password (SHA-256 prehash + bcrypt)
-  B-->>F: {access_token, refresh_token, token_type}
+    participant User
+    participant Frontend
+    participant Backend
 
-  Note over F: Token refresh is handled client-side.
+    User->>Frontend: Enter Credentials
 
-  F->>B: Call any protected endpoint with Authorization: Bearer <access_token>
-  B->>B: get_current_user() decodes JWT
-  B-->>F: 401 if expired/invalid
+    Frontend->>Backend: Login Request
 
-  F->>B: POST /api/v1/auth/refresh with refresh_token (OAuth2 scheme)
-  B-->>F: new {access_token, refresh_token}
-```
+    Backend-->>Frontend: Access Token
+    Backend-->>Frontend: Refresh Token
 
-### Incident processing flow (Mermaid)
+    Frontend->>Backend: Protected Request
 
-```mermaid
-sequenceDiagram
-  participant API as Backend API
-  participant MQ as RabbitMQ
-  participant W as Worker
-  participant DB as Database
+    Backend-->>Frontend: Authorized Response
 
-  API->>API: POST /api/v1/incidents/ creates incident
-  API->>MQ: event=incident.created payload={incident_id}
-  MQ->>W: message delivery
-  W->>DB: SELECT incident by PK
-  W->>DB: SELECT last 50 LogEntry where incident_id = <id>
-  W->>W: AIClient.analyze_incident(incident, log_text)
-  W->>DB: UPDATE Incident.description append "[AI Analysis]"\n+ analysis
-  W-->>MQ: ack message (via message.process())
+    Frontend->>Backend: Refresh Token Request
+
+    Backend-->>Frontend: New Tokens
 ```
 
 ### AI processing flow (Mermaid)
 
 ```mermaid
-graph TD
-  A[Worker receives incident.created] --> B[Load incident + recent logs]
-  B --> C{GOOGLE_API_KEY configured?}
-  C -- "empty/dummy" --> D[Return dummy analysis text]
-  C -- "real key" --> E[google.generativeai configure(api_key)]
-  E --> F[GenerativeModel gemini-1.5-flash]
-  F --> G[generate_content(prompt)]
-  G --> H[Persist analysis appended to Incident.description]
+flowchart TD
+
+    A[Incident Created]
+    B[Worker Receives Event]
+    C[Load Incident and Logs]
+    D{Gemini API Key Available}
+    E[Dummy Analysis]
+    F[Gemini Analysis]
+    G[Save Analysis]
+
+    A --> B
+    B --> C
+    C --> D
+
+    D -->|No| E
+    D -->|Yes| F
+
+    E --> G
+    F --> G
 ```
 
 
 ### Monitoring flow (Mermaid)
 
 ```mermaid
-sequenceDiagram
-  participant Prom as Prometheus
-  participant B as Backend
-  participant G as Grafana
+graph LR
 
-  Prom->>B: Scrape GET /metrics
-  B-->>Prom: prometheus-fastapi-instrumentator metrics
-  Prom-->>G: Data source queries
-  G-->>User: Visualizations from provisioned dashboards
+    Backend --> Metrics["/metrics"]
+
+    Prometheus --> Metrics
+
+    Grafana --> Prometheus
+
+    User --> Grafana
 ```
 
 ---
 
-## Screenshots
+## Application Screenshots
 
-All screenshots referenced below are present in this repo under `assets/`.
+### Login Page
 
-- Login screen: `assets/Login.png`
-- Dashboard screen: `assets/Dashboard.png`
-- New incident creation: `assets/New Incident Creation.png`
-- AI analysis screen: `assets/AI Analysis.png`
-- Docker compose running: `assets/Docker Compose Running.png`
-- Swagger UI - page 1: `assets/Swagger UI_page-1.jpg`
-- Swagger UI - page 2: `assets/Swagger UI_page-2.jpg`
+![Login](assets/Login.png)
 
-Markdown references:
+### Dashboard
 
-- ![Login](assets/Login.png)
-- ![Dashboard](assets/Dashboard.png)
-- ![New Incident Creation](assets/New%20Incident%20Creation.png)
-- ![AI Analysis](assets/AI%20Analysis.png)
-- ![Docker Compose Running](assets/Docker%20Compose%20Running.png)
-- ![Swagger UI page 1](assets/Swagger%20UI_page-1.jpg)
-- ![Swagger UI page 2](assets/Swagger%20UI_page-2.jpg)
+![Dashboard](assets/Dashboard.png)
+
+### Create Incident
+
+![Create Incident](assets/New%20Incident%20Creation.png)
+
+### AI Analysis
+
+![AI Analysis](assets/AI%20Analysis.png)
+
+### Docker Compose Running
+
+![Docker Compose](assets/Docker%20Compose%20Running.png)
+
+### Swagger API Documentation
+
+![Swagger Page 1](assets/Swagger%20UI_page-1.jpg)
+
+![Swagger Page 2](assets/Swagger%20UI_page-2.jpg)
 
 ---
 
