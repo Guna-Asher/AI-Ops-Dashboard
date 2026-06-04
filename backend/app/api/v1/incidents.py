@@ -3,7 +3,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_current_active_superuser
+from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.incident import IncidentCreate, IncidentUpdate, IncidentOut
@@ -65,9 +65,9 @@ async def update_incident(
 async def delete_incident(
     incident_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> None:
     service = IncidentService(db)
-    success = await service.delete_incident(incident_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    # Superusers can delete anything; normal users can only delete their assigned incidents
+    if not current_user.is_superuser:
+        incident = await service.get_incident(incident_id)
